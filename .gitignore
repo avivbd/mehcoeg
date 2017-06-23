@@ -1,2 +1,5 @@
 Learning_MCMC/*
 *.m~
+.DS_Store
+.ipynb_checkpoints/
+code/Matlab/.DS_Store
