@@ -5,7 +5,11 @@ function [ params ] = KalFilt_init(  )
 % need to scale
 
 params.t0 = 0;
-params.tf = 30e6;
+params.tf = 10e6;
+params.n_steps = 100;
+params.dt = (params.tf - params.t0)/params.n_steps;
+params.tt = params.t0:params.dt:params.tf;
+
 %reservoirs
 params.MCss = 3.8e18;
 params.MPss = 2e15;
