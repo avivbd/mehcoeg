@@ -8,60 +8,14 @@ clc
 %load init file
 p = KalFilt_init;
 
-%% make synthetic data 
-z = make_data(p);
+%% make some synthetic data 
+[t_obs, d13C_obs] = make_data(p);
 
 
 %% Kalman filter it
+[t_filt, Mp_filt, Mc_filt] = kalf(t_obs, d13C_obs, p);
 
-p.M = [p.M0; p.Fv]; %add the forcing function to the filter
-P = eye(length(p.M));
-F = [-p.kbp, p.kwp, 0; -p.kbo, -p.kws, 1; 0, 0, 0];
-Q = diag([0.001*p.MPss, 0.001*p.MCss, 0.01*p.Fv]);
-dt = p.tt(2) - p.tt(1);
-A = eye(3) + dt*F;
-R = 1e-13;
-% [A,Q] = lti_disc(F,[],Qc,dt);
-
-% MM2 = zeros(length(M),length(Y));
-
-
-MM = zeros(size(M,1), size(Y,2));
-PP = zeros(size(M,1), size(M,1), size(Y,2));
-
-for k=1:length(z)
-    U = [0;p.Fwo;0];
-%     H = [obsfun_deriv([M(1),M(2)],params),0];
-    H = obsfun_deriv_numeric([M(1),M(2)], @obsfun,p);
-    H = [H, 0];
-    M = A*M + dt*U;
-    P = A*P*A' + Q;
-
-%     IM = H*M;
-    IM = obsfun([M(1),M(2)], p);
-    S = (R + H*P*H');
-    K = P*H'/S;
-    M = M + K * (z(k)-IM);
-    P = P - K*S*K';
-    
-    MM(:,k) = M; 
-    PP(:,:,k) = P;
-
-end
-
-
-Mp_filt = MM(1,:);
-Mc_filt = MM(2,:);
-% F_forcing_filt = MM(3,:);
-% d13C_filt = obsfun(Mp_filt, Mc_filt);
-
-%%
-
-% plot(TT,Mp_filt, 'b','Parent',ax1)
-% plot(TT,Mc_filt,'g','Parent',ax2)
-% plot(TT, d13C_filt,'r','Parent',ax3)
-% plot(TT, F_forcing_filt, 'r', 'Parent',axf) 
-
+% plot(
 
 %% run the RTS smoother
 D = zeros(size(M,1),size(M,1),size(M,2));
@@ -99,12 +53,12 @@ plotting_fun(p)
 end
 
 
-function dy = odeFun(t,y,p)
+function dy = odeFun(~,y,p)
 
     Mp = y(1);
     Mc = y(2);
     dMp = p.kwp*Mc - p.kbp*Mp;
-    dMc = p.F_forcing(t) + p.Fwo - p.kws*Mc - p.kbo*Mp;
+    dMc = p.Fv + p.Fwo - p.kws*Mc - p.kbo*Mp;
     dy = [dMp;dMc];
 
 end
@@ -162,28 +116,62 @@ legend(axf, {'model input', 'reconstructed estimate'})
 
 end
 
-function [z] = make_data(p)
+function [T, z] = make_data(p)
 
-rng(1980)
+% rng(1980)
 
-p.F_forcing = @(t) p.Fv*ones(size(t)); 
+F_fun = @(t) (-1e-7*t+1 + 1*sin(2*pi*t/10e6) );
 
 p.tt = linspace(p.t0,p.tf,30);
 
 p.M0 = [p.MPss; p.MCss];
 
-[p.T,p.Y] = ode45(@(t,y) odeFun(t,y,p),[p.t0, p.tf], p.M0); 
+[T,Y] = ode45(@(t,y) odeFun(t,y,p),[p.t0, p.tf], p.M0); 
 
-p.Mpout = p.Y(:,1);
-p.Mcout = p.Y(:,2);
+Mp_out = Y(:,1);
+Mc_out = Y(:,2);
                         
-p.d13C_out = obsfun([p.Mpout, p.Mcout], p);
-
-
+d13C_out = obsfun([Mp_out, Mc_out], p);
 
 sigma = 0.2;
-% z = d13C_out + sigma*randn(size(d13C_out));
-zz = p.d13C_out.*(-1e-7*p.T+1 + 1*sin(2*pi*p.T/10e6) ); 
-z = zz + sigma*randn(size(p.d13C_out));
+zz = d13C_out.*F_fun(T); 
+z = zz + sigma*randn(size(d13C_out));
+end
+
+function [t_filt, Mp_filt, Mc_filt] = kalf(t_obs, d13C_obs, p)
+
+M = [p.MPss; p.MCss; p.Fv]; %augemented states vector
+P = eye(length(M));
+F = [-p.kbp, p.kwp, 0; -p.kbo, -p.kws, 1; 0, 0, 0];
+Q = diag([0.001*p.MPss, 0.001*p.MCss, 0.01*p.Fv]);
+dt = mean(diff(t_obs));
+A = eye(3) + dt*F;
+R = 1e-13;
+
+MM = zeros(size(M,1), length(d13C_obs));
+PP = zeros(size(M,1), size(M,1), length(d13C_obs));
+
+for k=1:(length(d13C_obs)-1)
+    U = [0; p.Fwo; 0];
+    H = obsfun_deriv_numeric([M(1),M(2)], @obsfun,p);
+    H = [H, 0];
+    M = A*M + dt*U;
+    P = A*P*A' + Q;
+
+    IM = obsfun([M(1),M(2)], p);
+    S = (R + H*P*H');
+    K = P*H'/S;
+    M = M + K * (d13C_obs(k)-IM);
+    P = P - K*S*K';
+    
+    MM(:,k) = M; 
+    PP(:,:,k) = P;
+
+end
+
+t_filt = [0 (1:(length(d13C_obs)-1))*dt];
+Mp_filt = MM(1,:);
+Mc_filt = MM(2,:);
+
 
 end

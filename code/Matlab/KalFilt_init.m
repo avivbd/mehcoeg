@@ -1,6 +1,8 @@
 function [ params ] = KalFilt_init(  )
-%UNTITLED Summary of this function goes here
+%UNTITLED initialization of params used for carbon cycle modeling
 %   Detailed explanation goes here
+
+% need to scale
 
 params.t0 = 0;
 params.tf = 30e6;
