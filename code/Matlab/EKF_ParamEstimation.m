@@ -1,4 +1,4 @@
-function KalFiltCCyle_ParamEstimation()
+function EKF_ParamEstimation()
 %% initialize
 
 close all 
@@ -93,12 +93,13 @@ P = eye(length(M));
 F = odefun_deriv_numeric([M(1), M(2), M(3)], @odeFun, p);
 F = padmat(F);
 
-Q = diag([0.001*p.MPss, 0.001*p.MCss, 0.001*p.delC, 0.01*p.Fv]);
+Q = diag([0.01*p.MPss, 0.01*p.MCss, 0.001*p.delC, 0.01*p.Fv]);
 A = eye(length(M)) + p.dt*F;
 R = 1e-13;
 
 MM = zeros(size(M,1), length(d13C_obs));
 PP = zeros(size(M,1), size(M,1), length(d13C_obs));
+AA = zeros(size(M,1), size(M,1), length(d13C_obs));
 
 for k=1:(length(d13C_obs))
     U = [0; p.Fwo; 0; 0];
@@ -106,7 +107,7 @@ for k=1:(length(d13C_obs))
     H = [H, 0];
     A = odefun_deriv_numeric([M(1), M(2), M(3)], @odeFun, p);
     A = padmat(A);
-    M = A*M + p.dt*U;
+    M = M + (A*M + U)*p.dt;%A*M + p.dt*U;
     P = A*P*A' + Q;
 
     IM = obsfun([M(1), M(2), M(3)], p);
