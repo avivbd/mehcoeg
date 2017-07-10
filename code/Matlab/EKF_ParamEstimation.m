@@ -1,6 +1,8 @@
 function EKF_ParamEstimation()
 %% initialize
 
+%Not working. might be too non-linear. try enkf and ukf
+
 close all 
 clear
 clc
@@ -11,8 +13,19 @@ p = KalFilt_init;
 %make some synthetic data 
 [Mp_out, Mc_out, d13C_out, d13C_forced, d13C_noisy] = make_data(p);
 
+% cv = cvpartition(length(d13C_noisy), 'HoldOut', 0.1);
+% idx = cv.training;
+% d13C_train =
+% d13Ctest = 
+Q0 = diag([1 1 1 1]);%1*diag([p.MPss, p.MCss, p.delC, p.Fv]);
+R0 = 100;
+% options = optimset('Display', 'iter'); 
+% fun = @(Q) sum((d13C_noisy' - kalf(d13C_noisy, p, Q0)).^2);
+
+% [Qoptim, delC] = fminsearch( fun, Q0, options);
+
 %Kalman filter it
-[MM, PP, AA, Q, U] = kalf(d13C_noisy, p);
+[MM, PP, AA, Q, U, delC] = kalf(d13C_noisy, p, Q0, R0);
 
 %RTS smooth it
 [Mp_filt, Mc_filt, d13C_filt, F_forcing_filt] = RTS(MM, PP, AA, Q, U, p);
@@ -21,9 +34,11 @@ p = KalFilt_init;
 plotting_fun(Mp_out, Mc_out, d13C_out, d13C_forced, d13C_noisy, Mp_filt,... 
              Mc_filt, d13C_filt, F_forcing_filt, p)
 
+% plot(p.tt, delC)
 
 
 end
+
 
 
 function dy = odeFun(~,y,p)
@@ -33,7 +48,9 @@ function dy = odeFun(~,y,p)
     delC = y(3);
     
     dMp = p.kwp*Mc - p.kbp*Mp;
+    
     dMc = p.Fv + p.Fwo - p.kws*Mc - p.kbo*Mp;
+    
     ddelta = ( p.Fv*(p.d13C_volc - delC) + p.Fwo*(p.delwo - delC) + ...
                p.Fwcarb*(p.delC - delC) + p.kbo*Mp*p.eps )/Mc;
     
@@ -52,16 +69,18 @@ function [J] = odefun_deriv_numeric(M, odeFun, params)
     Mp = M(:,1);
     Mc = M(:,2);
     delC = M(:,3);
-    J = jacobianest( @(M) odeFun([], M, params), [Mp, Mc, delC]);                    
+%     J = jacobianest( @(M) odeFun([], M, params), [Mp, Mc, delC]);
+    [~, J] = jaccsd( @(M) odeFun([], M, params), [Mp, Mc, delC]);
 end
 
-
 function delta = obsfun(M,p)
-%     Mp = M(:,1);
-%     Mc = M(:,2);
-    delC = M(:,3);
-%     delta = p.d13C_volc + p.kbo * Mp./(p.kbo*Mp + p.kws*Mc + p.Fwcarb)*p.eps;
-    delta = delC;
+
+% Mp = M(:,1);
+% Mc = M(:,2);
+% delta = p.d13C_volc + p.kbo * Mp./(p.kbo*Mp + p.kws*Mc + p.Fwcarb)*p.eps;
+    
+delC = M(:,3);
+delta = delC;
 end
 
 function [Mp_out, Mc_out, delC_out, d13C_forced, d13C_noisy] = make_data(p)
@@ -85,17 +104,14 @@ d13C_forced = d13C_obs.*F_fun(T);
 d13C_noisy = d13C_forced + sigma*randn(size(d13C_obs));
 end
 
-function [MM, PP, AA, Q, U] = kalf(d13C_obs, p)
-
+% function delC = kalf(d13C_obs, p, Q)
+function [MM, PP, AA, Q, U, delC] = kalf(d13C_obs, p, Q, R)
 M = [p.MPss; p.MCss; p.delC; p.Fv]; %augemented state vector
 P = eye(length(M));
-% F = [-p.kbp, p.kwp, 0; -p.kbo, -p.kws, 1; 0, 0, 0];
-F = odefun_deriv_numeric([M(1), M(2), M(3)], @odeFun, p);
+% F = odefun_deriv_numeric([M(1), M(2), M(3)], @odeFun, p);
+F = jac_analytic([M(1), M(2), M(3)], p);
 F = padmat(F);
 
-Q = diag([0.01*p.MPss, 0.01*p.MCss, 0.001*p.delC, 0.01*p.Fv]);
-A = eye(length(M)) + p.dt*F;
-R = 1e-13;
 
 MM = zeros(size(M,1), length(d13C_obs));
 PP = zeros(size(M,1), size(M,1), length(d13C_obs));
@@ -105,9 +121,13 @@ for k=1:(length(d13C_obs))
     U = [0; p.Fwo; 0; 0];
     H = obsfun_deriv_numeric([M(1),M(2), M(3)], @obsfun, p);
     H = [H, 0];
-    A = odefun_deriv_numeric([M(1), M(2), M(3)], @odeFun, p);
-    A = padmat(A);
-    M = M + (A*M + U)*p.dt;%A*M + p.dt*U;
+%     F = odefun_deriv_numeric([M(1), M(2), M(3)], @odeFun, p);
+    F = jac_analytic([M(1), M(2), M(3)], p);
+    F = padmat(F);
+    A = eye(size(F)) + p.dt*F;
+    M = A*M + p.dt*U;
+%     M = M + p.dt*(F*M + U);
+%     P = F*P*F' + Q;
     P = A*P*A' + Q;
 
     IM = obsfun([M(1), M(2), M(3)], p);
@@ -118,6 +138,7 @@ for k=1:(length(d13C_obs))
     
     MM(:,k) = M; 
     PP(:,:,k) = P;
+%     AA(:,:,k) = F;
     AA(:,:,k) = A;
 
 end
@@ -125,6 +146,8 @@ end
 % Mp_filt = MM(1,:);
 % Mc_filt = MM(2,:);
 % F_forcing_filt = MM(3,:);
+
+delC = MM(3,:);
 
 end
 
@@ -138,15 +161,15 @@ Q = repmat(Q,[1 1 size(M,2)]);
 
 % PP2 = zeros(size(M,1),length(Y));
 
-for k=(size(M,2)-1):-1:1
-    P_pred   = A(:,:,k) * P(:,:,k) * A(:,:,k)' + Q(:,:,k);
-    D(:,:,k) = P(:,:,k) * A(:,:,k)' / P_pred;
-    M(:,k)   = M(:,k) + D(:,:,k) * (M(:,k+1) - (A(:,:,k) * M(:,k) + p.dt*U));
-    P(:,:,k) = P(:,:,k) + D(:,:,k) * (P(:,:,k+1) - P_pred) * D(:,:,k)';
-    
-%     PP2(:,k) = diag(chol(P(:,:,k)));
-    
-end
+% for k=(size(M,2)-1):-1:1
+%     P_pred   = A(:,:,k) * P(:,:,k) * A(:,:,k)' + Q(:,:,k);
+%     D(:,:,k) = P(:,:,k) * A(:,:,k)' / P_pred;
+%     M(:,k)   = M(:,k) + D(:,:,k) * (M(:,k+1) - (A(:,:,k) * M(:,k) + p.dt*U));
+%     P(:,:,k) = P(:,:,k) + D(:,:,k) * (P(:,:,k+1) - P_pred) * D(:,:,k)';
+%     
+% %     PP2(:,k) = diag(chol(P(:,:,k)));
+%     
+% end
 
 % sigma_Mp_filt = PP2(1,:);
 % sigma_Mc_filt = PP(2,:);
@@ -205,5 +228,41 @@ function F = padmat(F)
 
 F = [F; zeros(1, size(F,2))];
 F = [F , [0; 1; 0; 0]];
+
+end
+
+function [z,A]=jaccsd(fun,x)
+% JACCSD Jacobian through complex step differentiation
+% By Yi Cao at Cranfield University, 02/01/2008
+% [z J] = jaccsd(f,x)
+% z = f(x)
+% J = f'(x)
+%
+z=fun(x);
+n=numel(x);
+m=numel(z);
+A=zeros(m,n);
+h=n*eps;
+for k=1:n
+    x1=x;
+    x1(k)=x1(k)+h*i;
+    A(:,k)=imag(fun(x1))/h;
+end
+
+end
+
+
+function J = jac_analytic(M, p)
+%%
+Mp = M(:,1);
+Mc = M(:,2);
+delC = M(:,3);
+
+J=[
+[           -p.kbp,                                                                                                 p.kwp,                             0];
+[           -p.kbo,                                                                                                -p.kws,                             0];
+[ (p.eps*p.kbo)/Mc, (p.Fwo*(delC - p.delwo) + p.Fv*(delC - p.d13C_volc) + p.Fwcarb*(delC - p.delC) - Mp*p.eps*p.kbo)/Mc^2, -(p.Fv + p.Fwo + p.Fwcarb)/Mc]];
+ 
+ 
 
 end
