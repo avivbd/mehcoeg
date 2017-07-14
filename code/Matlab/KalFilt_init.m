@@ -48,29 +48,31 @@ p.delC = p.d13C_volc + forg*p.eps;
 p.delwo = p.delC - p.eps;
 
 %states
-p.M = [p.MPss; p.MCss; p.delC; p.Fv];
+p.M = [p.MPss; p.MCss; p.delC];
 
 %states variances
-p.sigma_MP = 0.01*p.MPss;
-p.sigma_MC = 0.01*p.MCss;
-p.sigma_delC = 0.1*p.delC;
-p.sigma_Fv = 0.01*p.Fv;
+p.sigma_MP = 0.5*p.MPss;
+p.sigma_MC = 0.05*p.MCss;
+p.sigma_delC = 0.5*p.delC;
+% p.sigma_Fv = 0.01*p.Fv;
 
 %observation errors
 p.sigma_d13C = 0.1*p.delC;
-p.sigma_pCO2 = 0.005*p.pCO2;
-p.sigma_P = 0.005*p.P;
+p.sigma_pCO2 = 0.5*p.pCO2;
+p.sigma_P = 0.5*p.P;
 
 %forcing functions
-p.F_fun_d13C = @(t) (1 + 1*sin(1*pi*t/1e6) );
+p.F_fun_d13C = @(t) (1 + 3*sin(1*pi*t/1e6) );
 p.F_fun_pCO2 = @(t) (1 - 1e-1*t/1e6 );
 p.F_fun_P  = @(t) (1 + 1e-1*sin(-2*pi*t/1e6) );
 
 %ensemble characteristics
-p.n_ensemble = 200;
-p.w = [p.sigma_MP; p.sigma_MC; p.sigma_delC; p.sigma_Fv];  %process noise standard deviation
+p.n_ensemble = 100;
+% p.w = [p.sigma_MP; p.sigma_MC; p.sigma_delC; p.sigma_Fv];  %process noise standard deviation
+p.w = [p.sigma_MP; p.sigma_MC; p.sigma_delC];  %process noise standard deviation
 % p.z = [p.sigma_d13C; p.sigma_pCO2; p.sigma_P];  %measurement noise standard deviation
-p.z = [p.sigma_d13C; p.sigma_pCO2];
+% p.z = [p.sigma_d13C; p.sigma_pCO2];
+p.z = [p.sigma_d13C];
 
 end
 

@@ -9,7 +9,7 @@ ensembles =  zeros(length(muM), p.n_ensemble, length(y));
 
 for k=1:(length(y))
 
-    W = repmat(p.w, 1, p.n_ensemble) .* randn(length(muM), p.n_ensemble);            %create process noise
+    W = repmat(p.w, 1, p.n_ensemble) .* randn(length(muM), p.n_ensemble);          %create process noise
     V = repmat(p.z, 1, p.n_ensemble) .* randn(size(y,1), p.n_ensemble);     %create measurement noise
     M = repmat(muM, 1, p.n_ensemble);     %state ensemble
     
@@ -37,13 +37,13 @@ end
 S.Mp_filt = mus(1,:)';
 S.Mc_filt = mus(2,:)';
 S.delC_filt = mus(3,:)';
-S.F_forcing_filt = mus(4,:)';
+% S.F_forcing_filt = mus(4,:)';
 
 
 E.Mp =  squeeze(ensembles(1,:,:))';
 E.Mc = squeeze(ensembles(2,:,:))';
 E.delC = squeeze(ensembles(3,:,:))';
-E.F_forcing = squeeze(ensembles(4,:,:))';
+% E.F_forcing = squeeze(ensembles(4,:,:))';
 
 
 

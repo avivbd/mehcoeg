@@ -4,3 +4,4 @@ Learning_MCMC/*
 .ipynb_checkpoints/
 code/Matlab/.DS_Store
 Tutorials/*
+.Rproj.user
