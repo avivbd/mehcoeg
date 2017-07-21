@@ -12,7 +12,7 @@ source("/Users/avivb/Google Drive/Research/StanfordPostdoc/KalmanFiltering/code/
 
 
 
-##EXAMPLE 1
+# EXAMPLE 1 ----
 
 #The following example can be found in Crassidis and Junkins's
 #2012 book "Optimal estimation of dynamic systems".

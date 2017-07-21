@@ -10,6 +10,7 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
   #Note that this PF assumes (time invariant) additive Gaussian noise.
   
   #Last update PF function: 2016/06/16
+  #Modified by AB 07/17
   
   #Arguments:
   #-y is the data. The data can be a vector (one-dimensional measurements /
@@ -69,6 +70,7 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
   #Note that the latter specification of the GGfunction is useful when the control
   #input is known to vary over time.
   
+  
   mod1 <- mod
   y <- as.matrix(y)
   ym <- ncol(y)
@@ -96,6 +98,7 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
     xpt <- vector(1 + nrow(y), mode = "list")}
   ll <- 0
   invV <- solve(mod$V)
+  
   
   #generate particles at t=0
   xp <- rmvnorm(n=N, mean=m[1,], sigma=as.matrix(mod$C0))
@@ -134,8 +137,8 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
       
       #importance weights update
       xs <- matrix(y[i, ] - t(yp), nrow=N, byrow=TRUE)
-      w <- w*apply(xs, 1, function (x) exp(-.5*(tcrossprod(crossprod((x), invV),
-                                                           t(x)))))
+      w <- w*apply(xs, 1, function (x) exp(-.5*(tcrossprod(crossprod((x), invV), t(x)))))
+      if (all(w == 0)) next() #Aviv's hack. Won't die if all the weights are zero. 
       w <- w/sum(w)
       
       #a posteriori state estimate
@@ -149,6 +152,7 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
       
       ##resampling
       Neff <- 1 / crossprod(w)
+      
       if (Neff < Nthreshold) {
         
         if (resampling=="mult") {
@@ -392,12 +396,14 @@ PFsmooth <- function (filterData) {
   
   s <- rbind(matrix(0, n, p), sT)
   
+  
   if (n > 0)
     for (i in n:1) {
       fx <- matrix(apply(mod$xpt[[i]], 1, GGfunction, k=i), nrow=p)
       xs <- t(s[i + 1, ] - fx)
       w <- mod$wt[i, ]*apply(xs, 1, function (x)
         exp(-.5*(tcrossprod(crossprod((x), invW), t(x)))))
+      
       s[i, ] <- mod$xpt[[i]][sample(mod$N, 1, prob=w), ]
     }
   

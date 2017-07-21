@@ -1,5 +1,5 @@
 library(mvtnorm)
-
+source("/Users/avivb/Google Drive/Research/StanfordPostdoc/KalmanFiltering/code/R/PF.R")
 #The R function for the particle/bootstrap filter (PF) can be downloaded from: 
 # source("http://www.datall-analyse.nl/R/PF.R")
 #Take a look at the function PF (=the particle/bootstrap filter),
@@ -8,8 +8,8 @@ library(mvtnorm)
 # PF
 
 
+# EXAMPLE 1 ---------------------------------------------------------------
 
-## EXAMPLE 1
 
 #The following example can be found in Crassidis and Junkins's
 #2012 book "Optimal estimation of dynamic systems".
@@ -176,7 +176,8 @@ par(mfrow=c(1, 1))
 
 
 
-##EXAMPLE 2
+
+# EXAMPLE 2 ---------------------------------------------------------------
 
 #In this example we will use the pfNonlinBS function from the R-package RccpSMC
 #for fitting the bootstrap filter.
@@ -234,7 +235,7 @@ legend("topright", lty=c(1, 2, 2),
 
 
 
-##EXAMPLE 3
+# EXAMPLE 3 ---------------------------------------------------------------
 
 
 #The following example can be found in Julier, Uhlmann, and Durrant-Whyte's

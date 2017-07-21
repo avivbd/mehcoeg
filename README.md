@@ -1,2 +1,2 @@
 # mehcoeg
-package for inverse modeling of geochemical data. 
+Code for inverse modeling of geochemical data. 
