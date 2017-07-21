@@ -1,17 +1,16 @@
 library("MASS")
 library(mvtnorm)
 library(parallel)
-
+library(scales)
 
 graphics.off()
 rm(list = ls())
 
 set.seed(1976)
-#ADJUST PATH AS NEEDED
-path = "/Users/avivb/Google Drive/Research/StanfordPostdoc/KalmanFiltering/code/R/"
-setwd(path)
-source( "C_Cycle_init.R")
-source("PF.R")
+
+
+source("./code/R/C_cycle/C_Cycle_init.R")
+source("./code/R/General/PF.R")
 
 
 # preliminaries ----
@@ -105,17 +104,18 @@ pf_results = PF(y=y, mod=mod_pars, N=p$n_ensemble, resampling="strat", Nthreshol
 
 # Apply particle smoother ----
 
-
+#run smoother in serial
 # pf_smooth <- replicate(p$n_trajectories, PFsmooth(pf_results))
 
+#run smoother in parallel for a bit of speedup
 parReplicate <- function(cl, n, expr, simplify=TRUE, USE.NAMES=TRUE){
   parSapply(cl, 1:n, function(i, ex) eval(ex, envir=.GlobalEnv),
             substitute(expr), simplify=simplify, USE.NAMES=USE.NAMES)
 }
 
-clusterExport(cl,c("pf_results","p"))
-pf_smooth = parReplicate(cl, p$n_trajectories, PFsmooth(pf_results) )
+clusterExport(cl,c("pf_results","p", "PFsmooth"))
 
+pf_smooth = parReplicate(cl, p$n_trajectories, PFsmooth(pf_results) )
 
 
 MP_smooth = matrix(0, ncol=p$n_trajectories, nrow=p$nt+1)
@@ -134,43 +134,48 @@ for (i in 1:p$n_trajectories){
 
 # plotting ----
 
-plot(p$tt/1e6, x[,1], type="p", col=c(gray(level=.5)), xlab = "Time [Myr]", ylab = "MP")
-lines(c(0,p$tt)/1e6, pf_results$m[,1], lty=2, col="blue", lwd=1)
-lines(c(0, p$tt)/1e6, apply(MP_smooth, 1, mean), lty=2, col="red", lwd=1)
-legend("topleft", col=c("black", "blue", "red"),
-       lty=c(1, 2, 2), pch=c(1, NA, NA), lwd=c(2, 2, 1),
-       legend=c("true state", "filtered PF", "smoothed PF"),
+plot(p$tt/1e6, x[,1], type="p", pch=16, col="black", xlab = "Time [Myr]", ylab = "MP")
+matlines(c(0, p$tt)/1e6, MP_smooth, col= gray(0.5, 0.8), lty=3 )
+lines(c(0,p$tt)/1e6, pf_results$m[,1], lty=2, col="blue", lwd=3)
+lines(c(0, p$tt)/1e6, apply(MP_smooth, 1, median), lty=2, col="red", lwd=3)
+legend("topleft", col=c("black", "blue", "red", "gray"),
+       lty=c(NA, 2, 2, 2), pch=c(16, NA, NA, NA), lwd=c(NA, 2, 2, 1),
+       legend=c("true state", "filtered PF", "smoothed PF", "particle trajectories"),
        bty="n", y.intersp=1.2, cex=.7)
 
 
 
-plot(p$tt/1e6, x[,2], type="b", col=c(gray(level=.5)), xlab = "Time [Myr]", ylab = "MC")
-lines(c(0,p$tt)/1e6, pf_results$m[,2], lty=2, col="blue", lwd=1)
-lines(c(0, p$tt)/1e6, apply(MC_smooth, 1, mean), lty=2, col="red", lwd=1)
-legend("topleft", col=c("black", "blue", "red"),
-       lty=c(1, 2, 2), pch=c(1, NA, NA), lwd=c(2, 2, 1),
-       legend=c("true state", "filtered PF", "smoothed PF"),
+plot(p$tt/1e6, x[,2], type="p", pch=16, col="black", xlab = "Time [Myr]", ylab = "MC")
+lines(c(0,p$tt)/1e6, pf_results$m[,2], lty=2, col="blue", lwd=3)
+matlines(c(0, p$tt)/1e6, MC_smooth, col= gray(0.5, 0.8), lty=3 )
+lines(c(0, p$tt)/1e6, apply(MC_smooth, 1, median), lty=2, col="red", lwd=3)
+legend("topleft", col=c("black", "blue", "red", "gray"),
+       lty=c(NA, 2, 2, 2), pch=c(16, NA, NA, NA), lwd=c(NA, 2, 2, 1),
+       legend=c("true state", "filtered PF", "smoothed PF", "particle trajectories"),
+       bty="n", y.intersp=1.2, cex=.7)
+
+
+plot(p$tt/1e6, p$F_forcing(p$tt), type="p", pch=16, col="black", xlab = "Time [Myr]", ylab = "Forcing")
+lines(c(0,p$tt)/1e6, pf_results$m[,4], lty=2, col="blue", lwd=3)
+matlines(c(0, p$tt)/1e6, F_forcing_smooth, col= gray(0.5, 0.8), lty=3 )
+lines(c(0, p$tt)/1e6, apply(F_forcing_smooth, 1, median), lty=2, col="red", lwd=3)
+legend("topleft", col=c("black", "blue", "red", "gray"),
+       lty=c(NA, 2, 2, 2), pch=c(16, NA, NA, NA), lwd=c(NA, 2, 2, 1),
+       legend=c("true state", "filtered PF", "smoothed PF", "particle trajectories"),
+       bty="n", y.intersp=1.2, cex=.7)
+
+
+plot(p$tt/1e6, y, type="p", pch=16, col="black", xlab = "Time [Myr]", ylab = "Forcing")
+lines(c(0,p$tt)/1e6, pf_results$m[,3], lty=2, col="blue", lwd=3)
+matlines(c(0, p$tt)/1e6, delC_smooth, col= gray(0.5, 0.8), lty=3 )
+lines(c(0, p$tt)/1e6, apply(delC_smooth, 1, median), lty=2, col="red", lwd=3)
+legend("topleft", col=c("black", "blue", "red", "gray"),
+       lty=c(NA, 2, 2, 2), pch=c(16, NA, NA, NA), lwd=c(NA, 2, 2, 1),
+       legend=c("true state", "filtered PF", "smoothed PF", "particle trajectories"),
        bty="n", y.intersp=1.2, cex=.7)
 
 
 
-plot(p$tt/1e6, p$F_forcing(p$tt), type="b", col=c(gray(level=.5)), xlab = "Time [Myr]", ylab = "Forcing")
-lines(c(0,p$tt)/1e6, pf_results$m[,4], lty=2, col="blue", lwd=1)
-lines(c(0, p$tt)/1e6, apply(F_forcing_smooth, 1, mean), lty=2, col="red", lwd=1)
-legend("topleft", col=c("black", "blue", "red"),
-       lty=c(1, 2, 2), pch=c(1, NA, NA), lwd=c(2, 2, 1),
-       legend=c("true state", "filtered PF", "smoothed PF"),
-       bty="n", y.intersp=1.2, cex=.7)
-
-
-
-plot(p$tt/1e6, y, type="p", col=c(gray(level=.5)), xlab = "Time [Myr]", ylab = expression(paste("δ"^"13"*"C" )) )
-lines(c(0,p$tt)/1e6, pf_results$m[,3], lty=2, col="blue", lwd=1)
-lines(c(0, p$tt)/1e6, apply(delC_smooth, 1, mean), lty=2, col="red", lwd=1)
-legend("topleft", col=c("black", "blue", "red"),
-lty=c(1, 2, 2), pch=c(1, NA, NA), lwd=c(2, 2, 1),
-legend=c("true state", "filtered PF", "smoothed PF"),
-bty="n", y.intersp=1.2, cex=.7)
 
 
 
