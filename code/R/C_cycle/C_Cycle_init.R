@@ -39,6 +39,7 @@ p$M0 = c(p$MPss, p$MCss, p$delC, 1)
 
 #sensitivities
 p$kws = p$Fws/p$MCss
+p$kbc = p$Fbcarb/p$MCss
 p$kbo = p$Fbo/p$MPss
 p$kbp = p$Fbp/p$MPss
 p$kwp = p$Fwp/p$MCss

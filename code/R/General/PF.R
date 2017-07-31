@@ -3,9 +3,14 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
                 roughening=FALSE, Grough=.2,
                 MCparticles=TRUE, logLik=FALSE, simplify=FALSE) {
   
+  #Originally written by Stephan Gelissen. 
+  #http://blogs2.datall-analyse.nl/2016/04/11/rcode_particle_bootstrap_filter/    
+  #Modified by Aviv Bachan.     
+    
   #This function implements the particle filter (PF) as described
   #by Crassidis and Junkins in their 2012 book "Optimal estimation of
   #dynamic systems". This PF is also referred to as the bootstrap filter.
+  
   
   #Note that this PF assumes (time invariant) additive Gaussian noise.
   

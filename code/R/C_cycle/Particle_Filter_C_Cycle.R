@@ -47,13 +47,15 @@ obs_eqs <- function (x, k){
   return(delC) 
 }
 
-
+#noise
 W = function(){mvrnorm(n = 1, mu = matrix(0,1,dim(p$Q)[2]), Sigma = p$Q_sample)}
 V = function(){mvrnorm(n = 1, mu = matrix(0,1,dim(p$R)[2]), Sigma = p$R_sample)}
 
+#preallocate
 x = matrix(0, ncol=dim(p$Q)[2], nrow=p$nt)
 y = matrix(0, ncol=dim(p$R)[2], nrow=p$nt)
 
+#initial values
 x[1,] = p$M0
 
 #make some synthetic data
@@ -109,7 +111,7 @@ pf_results = PF(y=y, mod=mod_pars, N=p$n_ensemble, resampling="strat", Nthreshol
 
 #run smoother in parallel for a bit of speedup
 parReplicate <- function(cl, n, expr, simplify=TRUE, USE.NAMES=TRUE){
-  parSapply(cl, 1:n, function(i, ex) eval(ex, envir=.GlobalEnv),
+  parSapply(cl, integer(n), function(i, ex) eval(ex, envir=.GlobalEnv),
             substitute(expr), simplify=simplify, USE.NAMES=USE.NAMES)
 }
 
