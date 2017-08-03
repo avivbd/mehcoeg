@@ -76,6 +76,7 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
   #input is known to vary over time.
   
   
+    
   mod1 <- mod
   y <- as.matrix(y)
   ym <- ncol(y)
@@ -408,7 +409,7 @@ PFsmooth <- function (filterData) {
       xs <- t(s[i + 1, ] - fx)
       w <- mod$wt[i, ]*apply(xs, 1, function (x)
         exp(-.5*(tcrossprod(crossprod((x), invW), t(x)))))
-      
+      print(w)
       s[i, ] <- mod$xpt[[i]][sample(mod$N, 1, prob=w), ]
     }
   
