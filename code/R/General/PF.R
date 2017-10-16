@@ -108,6 +108,10 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
   
   #generate particles at t=0
   xp <- rmvnorm(n=N, mean=m[1,], sigma=as.matrix(mod$C0))
+  
+  # print(xp)
+  # browser()
+  
   #importance weights at t=0
   w <- rep(1/N, N)
   
@@ -124,7 +128,10 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
       ##time update
       wks <- rmvnorm(n=N, sigma=as.matrix(mod$W))
       #a priori state estimate
-      xp <- t(matrix(apply(xp, 1, GGfunction, k=i), nrow=p)) + wks
+      model_predict = apply(xp, 1, GGfunction, k=i)
+      xp <- t(matrix(model_predict, nrow=p)) + wks
+      
+      
       a[i, ] <- crossprod(w, xp)
       #covariance of a priori state estimate
       xc <- t(t(xp)-a[i, ])
@@ -133,7 +140,18 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
       ##measurement update
       vks <- rmvnorm(n=N, sigma=as.matrix(mod$V))
       #predicted measurement
-      yp <- t(matrix(apply(xp, 1, FFfunction, k=i), nrow=ym)) + vks
+      obs_predict=apply(xp, 1, FFfunction, k=i)
+      yp <- t(matrix(obs_predict, nrow=ym)) + vks
+      
+      # print(c("mod_pred: ",colMeans((t(model_predict)))))
+      # print(c("mod_pred+W: ",colMeans(((xp)))))
+      # print(c("mean W %: " , colMeans(abs(wks))/mod$m0*100 ))
+      # print(c("obs_pred: ",colMeans((t(obs_predict)))))
+      # print(c("obs_pred+V: ",colMeans((yp))))
+      # print(c("mean V %: ", colMeans(abs(vks))/y[i,]*100))
+      # print(c("obs: ", y[i,]))
+      
+      
       f[i, ] <- crossprod(w, yp)
       #covariance of predicted measurement
       yc <- t(t(yp)-f[i, ])
@@ -146,6 +164,11 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
       w <- w*apply(xs, 1, function (x) exp(-.5*(tcrossprod(crossprod((x), invV), t(x)))))
       if (all(w == 0)) next() #Aviv's hack. Won't die if all the weights are zero. 
       w <- w/sum(w)
+      
+      
+      # summary(xp) %>% print
+      # summary(yp) %>% print
+      # browser()
       
       #a posteriori state estimate
       m[i + 1, ] <- crossprod(w, xp)
@@ -181,6 +204,10 @@ PF <- function (y, mod, GGfunction, FFfunction, N,
         ck <- rmvnorm(n=N, sigma=as.matrix(Jk))
         xp <- xp + ck}
       
+      
+      # summary(xp) %>% print
+      # summary(yp) %>% print
+      # browser()
       
       ##compute log-likelihood
       if (logLik) {
@@ -409,7 +436,7 @@ PFsmooth <- function (filterData) {
       xs <- t(s[i + 1, ] - fx)
       w <- mod$wt[i, ]*apply(xs, 1, function (x)
         exp(-.5*(tcrossprod(crossprod((x), invW), t(x)))))
-      print(w)
+      
       s[i, ] <- mod$xpt[[i]][sample(mod$N, 1, prob=w), ]
     }
   
