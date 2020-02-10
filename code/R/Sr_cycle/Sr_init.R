@@ -3,16 +3,13 @@ Sr_init = function(plot_='n'){
     #list of carbon cycle parameters
     q = list()
     
-    setwd('/Users/avivb/Google Drive/Research/StanfordPostdoc/mehcoeg/code/R')
-    
     #data
-    q$Sr_data <- read_csv("~/Google Drive/Research/StanfordPostdoc/mehcoeg/Data/Sr_data.csv", col_types = 'dd')
-    q$Sr_spline <- read_csv("~/Google Drive/Research/StanfordPostdoc/mehcoeg/Data/Sr_spline.csv", col_types = 'dd')
-    q$Temp_data <- read_csv("~/Google Drive/Research/StanfordPostdoc/mehcoeg/Data/Temp_data.csv", col_types = 'dd')
+    q$Sr_data <- read_csv("./Data/Sr_data.csv", col_types = 'dd')
+    q$Sr_spline <- read_csv("./Data/Sr_spline.csv", col_types = 'dd')
+    q$Temp_data <- read_csv("./Data/Temp_data.csv", col_types = 'dd')
     
     #C-cycle params
-    setwd('/Users/avivb/Google Drive/Research/StanfordPostdoc/mehcoeg/code/R')
-    source("./C_cycle/C_Cycle_init.R")
+    source("./code/R/C_cycle/C_Cycle_init.R")
     p = C_Cycle_init()
     
     #reservoirs

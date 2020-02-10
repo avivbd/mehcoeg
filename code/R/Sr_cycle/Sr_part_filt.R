@@ -12,16 +12,14 @@ dev.off()
 rm(list = ls())
 # set.seed(1976)
 
-setwd('/Users/avivb/Google Drive/Research/StanfordPostdoc/mehcoeg/code/R')
-
-source("./Sr_cycle/Sr_init.R")
-source("./C_cycle/C_Cycle_init.R")
-source("./General/PF.R")
+source("./code/R/Sr_cycle/Sr_init.R")
+source("./code/R/C_cycle/C_Cycle_init.R")
+source("./code/R/General/PF.R")
 
 p = C_Cycle_init()
 q = Sr_init('y')
 
-state_eqs <- function (x, k){
+state_eqs <- function (x, k)
     t = q$t[1] + k*q$dt*1e-6
     MC <- x[1]
     MSr <- x[2]
@@ -76,7 +74,7 @@ mod_pars <- list(m0=c(p$MCss, q$MSr,  q$RSr, 1, 1), #initial state estimates
                  V=diag(c(1e-3, 5e-1, 1e-3)),    #measurement noise
                  W=diag(zz))    #process noise
 
-N_particles = 2500
+N_particles = 25000
 
 # #about 1 minute
 pf_results = PF(y=cbind(q$y_synth, q$pCO2_noisy, q$F_Forcing_ws_nsy), 
