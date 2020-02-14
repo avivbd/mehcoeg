@@ -1,0 +1,167 @@
+function [sol] = homebrew_solver()
+%
+
+%%%%%%%%%%%%%%%%%
+%for testing
+t=[0 1];
+y0 = [1 1];
+%%%%%%%%%%%%%%%%%
+
+%twiggle parameter (balance implicit and explicit)
+theta = 0.5 ;
+
+%inital time step size
+dt = 0.005;
+
+% max iterations
+max_iter = 50000;
+
+%%%%%%%%%%%%%%%%%%
+%parse arguments
+tstart = t(1);
+tend = t(2);
+y = y0(:);
+
+%%%%%%%%%%%%%%%
+% intialize values for main loop
+tk = tstart;
+k = 0;
+
+% initialize variables to collect results
+% Y = 
+% T = 
+
+not_done = true;
+
+while not_done
+    
+    dy = main_loop_body(tk, y, theta, dt);
+    
+    %add to previous value of y
+    y_new = y + dy;
+    tkplus1 = tk + dt;
+    tk = tkplus1;
+    
+    if tk >= tend
+        break
+    end
+    
+    if k >= max_iter
+        print('Max iterations reached!')
+        break
+    end
+    
+end    
+
+
+    %variable timestep
+%     phi = max( abs((Y(:,n)-Y(:,n-1))./Y(:,n-1)) );
+
+%         if phi < 0.01
+%             dt = dt*2;
+
+%         else
+%             dt = dt/2;
+
+%         end
+
+%     n = n+1;
+
+
+
+
+
+end
+
+%%%%%%%%%%%%%%%%
+%for testing compare to an analylical solution
+
+% [T,Ym]=ode15s(@odefun,t,y0);
+% Ym = (Ym)';
+
+% s=dsolve('Dy1 = -10*y1','Dy2 = -12*y2','y1(0)=2','y2(0)=2');
+% y2an = subs(s.y2,T);
+% y1an = subs(s.y1,T);
+% 
+% hold on
+% plot(T,y2an,'sb-')
+% plot(T,y1an,'^b-')
+% plot(T,Y(1,:),'og-')
+% plot(T,Y(2,:),'.g-')
+
+
+
+
+
+function [dy] = main_loop_body(tk, y, dt, theta)
+
+    %evaluate derivative
+    df = odefun(tk, y);
+
+    %evaluate the jacobian
+    J = num_jac(y, tk);
+
+    %calculate change in function value (dy)
+    dy = (eye(size(J))/dt-theta*J)\df;
+
+    
+end
+
+%%%%%
+ 
+function dy = odefun(t,y)
+
+y = y(:);
+
+dy(1) = -10*y(1);
+dy(2) = -12*y(2)*y(1);
+
+dy = dy(:);
+
+end
+
+
+function [ J ] = num_jac(y, tk)
+%NUM_JAC Calculate numerical Jacobian of a function
+
+%how sensitve is the jacobian
+eps = 0.000001;
+
+% options for method: 'complex-step', 'first-order-fd', 'second-order-fd'
+method = 'complex-step';
+
+J = zeros(length(y));
+
+%calculate Jacobian
+    for ii = 1:length(y) %perturb one value of y at a time
+        h = y(ii)*eps; % get diff relative to y_i
+        
+        switch method
+            case 'first-order-fd'
+                df_y = odefun(tk, y); 
+                y_plus_h = y;        
+                y_plus_h(ii) = y(ii) + h;
+                df_y_plus_h = odefun(tk, y_plus_h);
+                J(:,ii)  = (df_y_plus_h - df_y)/h; 
+                
+            case 'second-order-fd'
+                y_plus_h = y;        
+                y_plus_h(ii) = y(ii) + h;
+                df_y_plus_h = odefun(tk, y_plus_h);
+                
+                y_minus_h = y;
+                y_minus_h(ii) = y(ii) - h;
+                df_y_minus_h = odefun(tk, y_minus_h);
+                J(:, ii) = (df_y_plus_h - df_y_minus_h)/(2*h);
+                
+            case 'complex-step'
+                y_plus_ih = y;        
+                y_plus_ih(ii) = y(ii) + 1i*h;
+                df_y_plus_ih = odefun(tk, y_plus_ih);
+                J(:, ii) = imag(df_y_plus_ih)/h;     
+        end
+    end
+    
+end
+
+
