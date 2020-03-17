@@ -1,12 +1,17 @@
-function early_triassic_sr()
+function early_triassic_sr_ex2()
 %% Early Triassic lobal biogeochemical cycle model for Sr
-%   
-% TODO Remove outliers
 
 clc
 clear
 close all
-%%
+
+experiment2_weathering_and_RSr()
+
+end
+
+
+function experiment2_weathering_and_RSr()
+
 d = get_data();
 p = model_params(d);
 
@@ -14,10 +19,10 @@ t = d.Age;
 z_true = d.RSr;
 
 [sim_t, sim_Y] = simulate_system(t, p.x0, p);
-z_sim = sim_Y(:, 1) + p.v';
-
-% 
-subplot 211
+z_sim = sim_Y(:, 1) + p.v;
+ 
+figure()
+subplot 311
 hold on
 plot(t, z_sim ,'ro')
 % plot(sim_t, sim_Y(:, 1) ,'-')
@@ -28,93 +33,38 @@ ylabel('Sr^{87}/Sr^{86}')
 xlabel('t (Ma)')
 grid on
 
-subplot 212
+
+subplot 312
 hold on
 plot(sim_t, sim_Y(:, 2) ,'o')
 xlabel('t (Ma)')
 ylabel('F^{Sr}_{Riv} (10^{18} mol/Myr)')
 grid on
 
-% subplot 313
-% hold on
-% plot(p.t_interp, p.forcing ,'o')
 
-
-%%
-
-[X0, Xs, X_hats, Ds] = ...
-ENKS(@(t, x) odefun(t, x, p), p.H, ...
-     p.t, z_sim, p.x0, p.P0, p.R, p.Q, ...
-     'state_eqn_type', 'cont-time', ...
-     'ensemble_size', p.ensemble_size, ...
-     'implementation', 'pert-obs', ...
-     'cov_or_sd', 'sd', ...
-     'theta', 1);
-
- z_marker = 'o';
-
-plot_enkf(p.t, z_sim, X0, Xs, X_hats, ...
-          Ds, p.state_names, p.H, z_marker)
-
-
-%%      
-[X0, Xs, X_hats, Ds] = ...
-ENKS(@(t, x) odefun(t, x, p), p.H, ...
-     p.t, z_true, p.x0, p.P0, p.R, p.Q, ...
-     'state_eqn_type', 'cont-time', ...
-     'ensemble_size', p.ensemble_size, ...
-     'implementation', 'pert-obs', ...
-     'cov_or_sd', 'sd', ...
-     'theta', 1);
-z_marker = 'sk';
-
-plot_enkf(p.t, z_true, X0, Xs, X_hats, ...
-          Ds, p.state_names, p.H, z_marker)
-      
-      
-% reverse pass
-% t_r  = fliplr(p.t);
-% z_r = fliplr(z);
-
-% [X0, Xs, X_hats, Ds] = ...
-% ENKF(@(t, x) odefun(t, x, p), p.H, ...
-%      t_r, z_r, p.x0, p.P0, p.R, p.Q, ...
-%      'state_eqn_type', 'cont-time', ...
-%      'ensemble_size', p.ensemble_size, ...
-%      'implementation', 'pert-obs', ...
-%      'cov_or_sd', 'sd', ...
-%      'solver', 'myode',...
-%      'theta', 1);
-% 
-%  
-% plot_enkf(t_r, z_r, X0, Xs, X_hats, Ds, p.state_names, p.H)
+subplot 313
+hold on
+plot(sim_t, sim_Y(:, 3) ,'o')
+xlabel('t (Ma)')
+ylabel('F^{Sr}_{Riv} (10^{18} mol/Myr)')
+grid on
 
 
 end
 
 function  p = model_params(d)
-%% get system parameters
+%% Model parameters
 p = struct();
-p.t = d.Age';
+p.t = d.Age;
 p.dt = p.t(2) - p.t(1);
-p.t_interp = p.t(1):p.dt:p.t(end);
+p.t_interp = (p.t(1):p.dt:p.t(end))';
 
-p.state_names = {'Sr^{87}/Sr^{86}', 'F^{Sr}_{Riv} (10^{18} mol/Myr)'};
-
+p.state_names = {'Sr^{87}/Sr^{86}', 'F^{Sr}_{Riv} (10^{18} mol/Myr)','{Sr^{87}/Sr^{86}}_{riv}' };
 %numbers from Arthur and Kump 1997
 p.F_Sr_hydro = 0.35e-2; %0.35e10 mol/y = 0.35e16 mol/Myr = 0.35e-2 (1e18 mol)/My 
 p.R_Sr_hydro = 0.7035;
-p.MSr = 1.25e-1; % 1.25e17 mol= 1.25e-1 (1e18 mol)
+p.MSr = 1.25e-1; % 1.25e17 mol = 1.25e-1 (1e18 mol)
 
-%either set riverine input to the modern and calibrate ocean accordingly
-% p.F_Sr_riv = 2.2e-2; %2.2e-2; % 2.2e10 mol = 2.2e16 mol/Myr = 2.2e-2 (1e18 mol)/My
-% p.RSr = (p.F_Sr_hydro*p.R_Sr_hydro + p.F_Sr_riv*p.R_Sr_riv)/(p.F_Sr_hydro + p.F_Sr_riv);
-
-%or set the ocean and adjust the riverine flux to maintain balance.
-% p.RSr(p.F_Sr_hydro + p.F_Sr_riv) = (p.F_Sr_hydro*p.R_Sr_hydro + p.F_Sr_riv*p.R_Sr_riv)
-% p.RSr*p.F_Sr_hydro + p.RSr*p.F_Sr_riv = p.F_Sr_hydro*p.R_Sr_hydro + p.F_Sr_riv*p.R_Sr_riv
-% p.RSr*p.F_Sr_hydro - p.F_Sr_hydro*p.R_Sr_hydro = p.F_Sr_riv*p.R_Sr_riv - p.RSr*p.F_Sr_riv
-% p.F_Sr_riv = p.F_Sr_hydro(p.RSr - p.R_Sr_hydro)/(R_Sr_riv - p.RSr)
 p.RSr = 0.7071;
 p.R_Sr_riv = 0.7101;
 p.F_Sr_riv = p.F_Sr_hydro*(p.RSr - p.R_Sr_hydro)/(p.R_Sr_riv - p.RSr);
@@ -122,13 +72,26 @@ p.F_Sr_riv = p.F_Sr_hydro*(p.RSr - p.R_Sr_hydro)/(p.R_Sr_riv - p.RSr);
 % affirm mass balance
 assert(p.R_Sr_riv*p.F_Sr_riv + p.R_Sr_hydro*p.F_Sr_hydro == p.RSr*(p.F_Sr_riv + p.F_Sr_hydro))
 
-p.mean_diff_Sr = mean(abs(diff(d.RSr)./diff(d.Age)));
 
-p.x0 = [p.RSr;  p.F_Sr_riv];
-p.H = [1 0];
+%% Forcing
+
+tt = (p.t_interp - min(p.t_interp))/(max(p.t_interp) - min(p.t_interp));
+k = 32;
+p.forcing = 0.9*p.F_Sr_riv*...
+    [5*ones(length(tt(1:k)), 1);...
+    -7.25*ones(length(tt(k:2*k-1)), 1);...
+    zeros(length(tt(2*k-1:end-2)), 1)];
+
+p.v = 0.04*p.F_Sr_riv*randn(length(p.t), 1);
+
+
+%% Ensemble parameters
+
+p.x0 = [p.RSr;  p.F_Sr_riv; p.R_Sr_riv];
+p.H = [1 0 0];
 p.nx = length(p.x0);
 
-p.Q = diag([1e-4, 1e-3]);
+p.Q = diag([1e-4, 1e-3, 1e-4]);
 
 p.R = 1e-6;
 
@@ -137,20 +100,11 @@ p.P0 = diag(p.x0*5e-3);
 p.ensemble_size = 100;
 
 
-tt = (p.t_interp - min(p.t_interp))/(max(p.t_interp) - min(p.t_interp));
-k = 32;
-p.forcing = 0.9*p.F_Sr_riv*[5*ones(1, length(tt(1:k))), -7.25*ones(1, length(tt(k:2*k-1))), zeros(1,length(tt(2*k-1:end-2)))];
-p.v = 0.04*p.F_Sr_riv*randn(1, length(p.t));
-
-% plot(tt, p.forcing)
-% p.forcing = 0*ones(size(p.t_interp));
-% p.forcing = 0;
 
 end
 
 function dx = odefun(t, x, p)
 %%
-
 
 RSr = x(1, :);
 F_Sr_riv = x(2, :);
@@ -176,11 +130,6 @@ function [T, Y] = simulate_system(t, x0, p)
 
 [T, Y] = ode_solver(@(t, x) odefun(t, x, p), t, x0);
 
-% [T, Y] = ode15s(@(t, x) odefun(t, x, p), t, x0);
-% T = T';
-% Y = Y';
-
-
 end
 
 function d = get_data()
@@ -191,9 +140,6 @@ d(exclude_points, :) = [];
 NEW_A = [UA,accumarray(idx,d(:,2),[],@mean)];
 d = array2table(NEW_A, 'VariableNames', {'Age' 'RSr'});
 end
-
-
-
 
 
 

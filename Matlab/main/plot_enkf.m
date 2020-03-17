@@ -17,7 +17,7 @@ for k=1:n_states
     
     subplot(n_states, 1, k);
     hold on
-
+    means = squeeze(mean(Xs, 2));
     ensemble = reshape(squeeze(Xs(k, :, :)), 1, []);
     t_jigger = repmat(t, n_ensemble, 1) + ...
                     mean(diff(t))/5*randn(n_ensemble, length(t));
@@ -28,6 +28,7 @@ for k=1:n_states
            'MarkerFaceAlpha', 0.25,...
            'MarkerEdgeAlpha', 0.25)
      grid on  
+     plot(t, means(k, :), 'o')
     
      
        
